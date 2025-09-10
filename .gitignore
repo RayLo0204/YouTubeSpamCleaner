@@ -1,0 +1,12 @@
+# IDE files
+.idea/
+
+# Python cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+
+# Sensitive user data
+spam_keywords.txt
+token.json
+client_secret.json
