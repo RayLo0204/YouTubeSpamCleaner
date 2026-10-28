@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>YouTube Spam Cleaner</title><link rel="icon" href="/assets/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/assets/style.css"></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="#overview"><span class="brand-mark">▶</span><span>Spam Cleaner<small>FOR YOUTUBE</small></span></a>
+  <div class="nav-caption">WORKSPACE</div>
+  <nav aria-label="Main navigation">
+    <button data-page="overview" class="nav-item active"><span>◫</span> Overview</button>
+    <button data-page="comments" class="nav-item"><span>☷</span> Comment review <b id="nav-flagged">0</b></button>
+    <button data-page="rules" class="nav-item"><span>◇</span> Detection rules</button>
+    <button data-page="schedule" class="nav-item"><span>◷</span> Auto-clean</button>
+    <button data-page="history" class="nav-item"><span>↺</span> Activity history</button>
+    <button data-page="settings" class="nav-item"><span>⚙</span> Connection</button>
+  </nav>
+  <div class="sidebar-bottom"><span class="local-dot"></span> Local-first. Your channel, your rules.<small id="version">Version 2.0.0</small><button id="quit" class="quit-button">Quit application ↗</button></div>
+</aside>
+<main>
+  <header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong id="page-label">Overview</strong></div><div class="topbar-right"><span id="mode-badge" class="badge">LOCAL APP</span><span class="account-pill" id="account-pill">Not connected</span></div></header>
+  <div id="demo-banner" class="demo-banner" hidden><strong>Demo workspace</strong><span>Sample comments only. No requests or changes are made to YouTube.</span></div>
+  <div id="session-error" class="session-error" hidden>Open this page from the application launcher to reconnect your local session.</div>
+  <div class="content">
+    <section data-section="overview">
+      <div class="page-heading"><div><div class="eyebrow">A HEALTHIER COMMENT SECTION</div><h1>Make room for real conversations.</h1><p>Find the noise. Review with context. Keep your community moving.</p></div><button class="primary" data-goto="comments">Review comments <span>→</span></button></div>
+      <div class="metrics"><article class="metric"><span>COMMENTS SYNCED</span><strong id="metric-total">0</strong><small>Top-level comments and replies</small></article><article class="metric attention"><span>NEED YOUR ATTENTION</span><strong id="metric-flagged">0</strong><small>Matched your detection rules</small></article><article class="metric"><span>COMMENTS HANDLED</span><strong id="metric-handled">0</strong><small>Recorded moderation results</small></article></div>
+      <div class="overview-grid"><article class="card scan-card"><div class="card-header"><div><h2>Scan your channel</h2><p>Bring comments into your workspace before taking action.</p></div><span class="round-icon">↻</span></div>
+        <form id="scan-form"><label>Video URL or ID <span class="optional">optional</span><input id="scan-target" placeholder="Leave empty to scan your connected channel" maxlength="300"></label>
+          <div class="form-row"><label>Thread limit<input id="scan-limit" type="number" min="1" max="5000" value="500"></label><label>Comment status<select id="scan-status"><option value="published">Published</option><option value="heldForReview">Held for review</option></select></label></div>
+          <div class="check-row"><label><input id="scan-replies" type="checkbox" checked> Include replies</label><label><input id="scan-resume" type="checkbox"> Resume saved progress</label></div>
+          <div class="form-footer"><span>Only your connected channel can be moderated.</span><button id="scan-start" class="primary" type="submit">Start scan <span>→</span></button></div>
+        </form>
+      </article><article class="card task-card"><div class="card-header"><div><h2>Current task</h2><p id="task-state">Ready when you are.</p></div><span id="task-dot" class="status-dot"></span></div><div id="task-body" class="task-body"><div class="idle-graphic">✓</div><h3>Everything is up to date.</h3><p>Your next scan or moderation task will appear here.</p></div><button id="cancel-task" class="secondary" hidden>Cancel remaining work</button></article></div>
+      <article class="card activity-preview"><div class="card-header"><div><h2>Latest activity</h2><p>A clear record of what happened, and why.</p></div><button class="text-button" data-goto="history">View history →</button></div><div id="recent-events" class="event-list"></div></article>
+    </section>
+
+    <section data-section="comments" hidden>
+      <div class="page-heading"><div><div class="eyebrow">REVIEW WITH CONTEXT</div><h1>Your comment workspace.</h1><p>Every match has a reason. You decide what happens next.</p></div><button id="export" class="secondary">Export CSV ↗</button></div>
+      <article class="card comments-card"><div class="review-toolbar"><div class="segmented" id="comment-tabs"><button data-view="flagged" class="active">Flagged</button><button data-view="all">All comments</button><button data-view="handled">Handled</button></div><input id="search" class="search" placeholder="Search comments or authors" aria-label="Search comments or authors"></div>
+        <div class="bulk-toolbar"><label><input id="select-all" type="checkbox"> <span id="selected-count">0 selected</span></label><div><select id="moderation-action" aria-label="Moderation action"><option value="hold">Move to review</option><option value="reject">Remove from public view</option><option value="ban">Remove + block author</option><option value="publish">Publish held comments</option></select><button id="process" class="primary small">Apply to selected</button></div></div>
+        <div class="table-wrap"><table class="comments-table"><thead><tr><th class="check-cell"></th><th>AUTHOR & COMMENT</th><th>MATCHED RULES</th><th>STATUS</th></tr></thead><tbody id="comments-body"></tbody></table></div>
+        <div id="comments-empty" class="empty-state" hidden><span>☷</span><h3>No comments in this view.</h3><p>Run a scan, add detection rules, or try another filter.</p><button class="secondary" data-goto="overview">Go to overview</button></div>
+        <div class="pagination"><span id="page-count">0 comments</span><div><button id="previous-page" class="secondary small">← Previous</button><button id="next-page" class="secondary small">Next →</button></div></div>
+      </article><p class="footnote">Removing sets a comment to rejected. YouTube does not allow rejected comments to be republished through this API. Blocking applies to additional comments from that author.</p>
+    </section>
+
+    <section data-section="rules" hidden>
+      <div class="page-heading"><div><div class="eyebrow">EXPLAINABLE BY DESIGN</div><h1>Teach it what to look for.</h1><p>Simple rules, visible reasons. No external AI service required.</p></div></div>
+      <div class="rules-layout"><article class="card"><div class="card-header"><div><h2>Your detection rules</h2><p>Author allowlists take priority over matching rules.</p></div><span id="rule-count" class="badge">0 RULES</span></div><div id="rules-list" class="rules-list"></div></article>
+        <article class="card"><h2>Add a rule</h2><form id="rule-form"><label>Match type<select id="rule-kind"><option value="contains">Contains text</option><option value="phrase">Whole phrase</option><option value="regex">Regular expression</option><option value="allow_author">Allow author channel ID</option></select></label><label>Pattern<input id="rule-pattern" placeholder="e.g. guaranteed profit" maxlength="300" required></label><p class="helper">Text matching ignores case, normalizes full-width characters, and removes invisible format characters.</p><button class="primary" type="submit">Add rule +</button></form><hr><h3>Bring your existing keywords</h3><p class="helper">Import one keyword per line from a text file. Existing entries are kept.</p><label class="file-button">Import keyword list<input id="import-rules" type="file" accept=".txt,text/plain"></label></article>
+      </div>
+    </section>
+
+    <section data-section="schedule" hidden>
+      <div class="page-heading"><div><div class="eyebrow">A LITTLE LESS MANUAL WORK</div><h1>Keep the noise in check.</h1><p>Schedule scans and apply your rules while the application stays running.</p></div></div>
+      <div class="overview-grid"><article class="card"><div class="card-header"><div><h2>Automatic cleaning</h2><p id="schedule-state">Currently paused</p></div><span class="round-icon">◷</span></div><form id="schedule-form"><label>Video URL or ID <span class="optional">optional</span><input id="auto-target" placeholder="Leave empty for your connected channel" maxlength="300"></label><div class="form-row"><label>Every (minutes)<input id="auto-interval" type="number" min="1" max="1440" value="15"></label><label>Thread limit per run<input id="auto-limit" type="number" min="1" max="5000" value="500"></label></div><label>Action for matching comments<select id="auto-action"><option value="hold">Move to review</option><option value="reject">Remove from public view</option><option value="ban">Remove + block author</option></select></label><label class="checkbox-label"><input id="auto-enabled" type="checkbox"> Enable automatic cleaning</label><button class="primary" type="submit">Save schedule</button></form></article><article class="card guidance"><h2>You stay in control.</h2><div class="guidance-item"><span>01</span><div><h3>Start with review</h3><p>Hold matches for review while you tune your rules. Removal and blocking are available when you are ready.</p></div></div><div class="guidance-item"><span>02</span><div><h3>One task at a time</h3><p>Manual work and scheduled work share one queue. A scan never overlaps another cleaning task.</p></div></div><div class="guidance-item"><span>03</span><div><h3>Runs locally</h3><p>Closing the browser keeps the service running. Sleeping, shutting down, or quitting the application stops it.</p></div></div><div class="guidance-item"><span>04</span><div><h3>Errors pause automation</h3><p>Review connection, permission, or quota errors in Activity history before enabling the schedule again.</p></div></div></article></div>
+    </section>
+
+    <section data-section="history" hidden>
+      <div class="page-heading"><div><div class="eyebrow">NOTHING HAPPENS IN THE DARK</div><h1>A trail you can follow.</h1><p>Scan progress, confirmed actions, and anything that needs a second look.</p></div></div>
+      <article class="card"><div class="card-header"><div><h2>Recent tasks</h2><p>Interrupted tasks remain visible after restarting.</p></div></div><div class="table-wrap"><table><thead><tr><th>TASK</th><th>STARTED</th><th>RESULT</th><th>DETAILS</th></tr></thead><tbody id="jobs-body"></tbody></table></div></article>
+      <article class="card history-card"><div class="card-header"><div><h2>Moderation journal</h2><p>Unknown results need verification in YouTube Studio before retrying.</p></div></div><div id="actions-list" class="event-list"></div></article>
+      <article class="card history-card"><div class="card-header"><div><h2>Event log</h2><p>Latest 150 events</p></div></div><div id="all-events" class="event-list"></div></article>
+    </section>
+
+    <section data-section="settings" hidden>
+      <div class="page-heading"><div><div class="eyebrow">YOUR ACCOUNT STAYS YOURS</div><h1>Connect your channel.</h1><p>Authorize through Google. Credentials stay on this computer.</p></div></div>
+      <div class="overview-grid"><article class="card"><div class="card-header"><div><h2>Google connection</h2><p id="connection-detail">Not connected yet</p></div><span class="round-icon">↗</span></div><div class="setup-step"><b>1</b><div><h3>Import OAuth credentials</h3><p>Choose the JSON file for a Google OAuth <strong>Desktop app</strong> with YouTube Data API v3 enabled.</p><label class="file-button">Choose credentials JSON<input id="oauth-file" type="file" accept=".json,application/json"></label><small id="credentials-state">No credentials imported</small></div></div><div class="setup-step"><b>2</b><div><h3>Sign in with Google</h3><p>A system browser tab opens for authorization. Choose the account associated with your YouTube channel.</p><button id="connect" class="primary">Connect YouTube channel ↗</button><button id="disconnect" class="text-button">Disconnect</button></div></div></article><article class="card guidance"><h2>Before you connect</h2><p>Create a Google Cloud project, enable YouTube Data API v3, configure your OAuth consent screen, and create a Desktop app OAuth client.</p><p>If the consent screen is in Testing mode, add your Google account as a test user. Google may expire test-mode authorization, requiring you to reconnect.</p><a class="external-link" href="https://developers.google.com/youtube/v3/getting-started" target="_blank" rel="noreferrer">YouTube API setup guide ↗</a><hr><h3>Private by default</h3><p>The app listens only on this computer. Tokens use Windows DPAPI in the Windows build. No comments are sent to an external classification service.</p><p id="storage-detail" class="helper"></p></article></div>
+    </section>
+    <footer>YouTube Spam Cleaner <span>Independent tool. Not affiliated with YouTube or Google.</span></footer>
+  </div>
+</main>
+<div id="toast" role="status" class="toast" hidden></div>
+<dialog id="confirm-dialog"><form method="dialog"><span class="dialog-symbol">◇</span><h2 id="confirm-title">Apply this action?</h2><p id="confirm-message"></p><div class="dialog-actions"><button class="secondary" value="cancel">Go back</button><button class="primary" value="confirm">Confirm action</button></div></form></dialog>
+<script src="/assets/app.js" defer></script>
+</body></html>

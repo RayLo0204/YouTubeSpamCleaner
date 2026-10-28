@@ -1,115 +1,124 @@
 # YouTube Spam Cleaner
 
------
+A local web app for reviewing and moderating spam on **your own YouTube channel**. Download the Windows app and work in your browser. No Python, Node.js, or compiler is required.
 
-## English
+![Offline demo workspace](docs/demo-overview.png)
 
-This is a desktop application built with **PyQt6** and the **YouTube Data API v3** to help you manage and clean up spam comments on your YouTube videos or channel. It offers a powerful combination of manual review and automated processing, allowing you to delete comments or ban users based on a customizable list of keywords.
+## Download and run
 
-### Features
+1. Download **YouTubeSpamCleaner-2.0.0-windows-x64.zip** from the [latest release](https://github.com/RayLo0204/YouTubeSpamCleaner/releases/latest).
+2. Extract the ZIP, then double-click **YouTubeSpamCleaner.exe**. Your default browser opens the local app.
+3. Try **Demo.cmd** for an offline sample channel, or connect your channel using the Google setup below.
 
-  - **Google Account Login**: Securely log in using your Google account with OAuth 2.0.
-  - **Comment Retrieval**: Fetch and display comments from a specific video or your entire channel.
-  - **Spam Detection**: Automatically flags comments containing your predefined keywords.
-  - **Keyword Management**: Easily add, edit, remove, and save your list of spam keywords.
-  - **Manual Processing**: Manually review and process flagged comments by choosing to delete them or ban the users.
-  - **Auto-Process Mode**: Set a recurring timer to automatically process new comments based on your keyword list, without manual intervention.
-  - **Real-time Logging**: View a detailed log of all actions performed by the application.
+The Windows x64 download includes the runtime and web assets. It is unsigned; checksums are included. Demo mode uses a separate database and never contacts Google or changes real comments.
 
-### Detailed Usage Guide
+## Connect your channel
 
-1.  **Login**: Click the **"Login with Google"** button and follow the on-screen instructions to select your `client_secret.json` file and authenticate.
-2.  **Input Video/Channel ID**: Choose either **"Video ID"** or **"Channel ID"** and enter the corresponding ID into the text field.
-3.  **Manage Keywords**: Use the **"Add"**, **"Remove"**, and **"Edit"** buttons to manage your spam keyword list. Click **"Save"** to save your changes to the `spam_keywords.txt` file.
-4.  **List Comments**: Click **"List Comments"** to fetch and display comments. The application will automatically check comments that contain your spam keywords.
-5.  **Process Comments**: In the **"Comments"** tab, review the listed comments, manually check or uncheck any comments you wish to, and then select your desired action: **"Delete only"** or **"Delete and Ban user."** Click **"Process Selected Comments"** to perform the chosen action.
-6.  **Auto-Process**: Switch to the **"Auto"** tab, set the desired interval in minutes, and click **"Start Auto-Process."** The application will then automatically run at the specified interval.
+Google credentials are required for real use. No shared API key or developer account is embedded.
 
-### Prerequisites
+1. Create or select a project in [Google Cloud Console](https://console.cloud.google.com/).
+2. Enable **YouTube Data API v3**.
+3. Configure **Google Auth Platform / OAuth consent**. If the app is in Testing, add your Google account as a test user.
+4. Create an **OAuth client ID**, choosing **Desktop app**, and download its JSON credentials.
+5. Open **Connection** in the cleaner, import the JSON, and choose **Connect with Google**.
+6. Complete consent in your system browser. Return to the cleaner and verify the displayed channel before scanning.
 
-Before running the application, you need to set up a Google Cloud project and enable the YouTube Data API.
+The scope is `https://www.googleapis.com/auth/youtube.force-ssl`, which permits reading and moderating comments. Authorization uses the installed-app flow with PKCE and a temporary loopback callback. Google may restrict testing, require verification, or expire testing-mode refresh tokens depending on your consent configuration. Follow Google's consent requirements and reconnect when requested. See [Google's desktop OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app).
 
-1.  **Create a Google Cloud Project**: Go to the Google Cloud Console and create a new project.
-2.  **Enable the YouTube Data API v3**: In the Google Cloud Console, navigate to the **APIs & Services** dashboard and enable the **YouTube Data API v3**.
-3.  **Create OAuth 2.0 Credentials**: Go to the **Credentials** page, click **CREATE CREDENTIALS**, and select **OAuth client ID**. Choose "Desktop app" as the application type.
-4.  **Download `client_secret.json`**: Download the `client_secret.json` file. You will need this file to log in to the application.
+## Review and clean
 
-### Installation and Usage
+1. In **Rules**, add words, phrases, regular expressions, or trusted author channel IDs. Import an existing UTF-8 keyword file with one keyword per line.
+2. On **Overview**, scan the channel or paste an owned video's URL. Choose published or held comments, the thread limit, and whether to include replies.
+3. Open **Comment review**, inspect matches and rule explanations, and select comments.
+4. Choose an action and confirm. Track progress and results in **History**.
+5. Optionally enable **Auto-clean** after reviewing your rules. It runs while the app and computer remain running. Failures pause automation.
 
-1.  **Clone the Repository**:
+| Action | Effect |
+|---|---|
+| Hold for review | Moves selected comments to the review queue. |
+| Reject | Hides selected comments. Rejecting a top-level comment also hides its replies. |
+| Reject + ban author | Rejects selected comments and asks YouTube to reject additional comments by those authors. |
+| Publish | Publishes comments currently held for review. |
 
-    ```bash
-    git clone https://github.com/<username>/<repo-name>.git
-    cd <repo-name>
-    ```
+Actions use [`comments.setModerationStatus`](https://developers.google.com/youtube/data/reference/rest/v3/comments/setModerationStatus) in batches of up to 50 IDs. The app does not offer permanent deletion. Rejected comments cannot be republished through this API. Author bans have broader effects than the selected rows.
 
-2.  **Install Dependencies**:
-    You must have Python 3 installed. Install the required libraries using pip.
+A timeout can occur after YouTube accepts a write. Such actions are marked **Unknown** and never automatically repeated. Check YouTube Studio, then reconcile the action in History. A confirmed API response means YouTube accepted the request; the app does not independently verify the public page afterward.
 
-    ```bash
-    pip install PyQt6 google-api-python-client google-auth-oauthlib
-    ```
+## Matching, pagination, and limits
 
-3.  **Run the Application**:
-    Place your downloaded `client_secret.json` file in the same directory as the application script. Then, run the application from your terminal.
+- Matching normalizes Unicode width, removes invisible format characters, folds case, and normalizes whitespace. Contains rules match substrings; phrase rules require word boundaries. Regex matching has a time limit. Exact author channel ID allowlists override matching rules.
+- Scans paginate through threads and replies. The default is 500 top-level threads; the range is 1–5,000 per run.
+- Each client session permits at most 500 read requests. Each thread permits up to 10 reply pages per scan. Partial scans retain cursors; **Resume** continues them. Starting a fresh scan checks newest threads again.
+- Replies are fetched separately, including replies omitted from thread previews. API visibility and moderation-state restrictions still apply. Results are not a snapshot of every historic or deleted comment.
+- Automatic runs scan their configured target/status, then process up to 1,000 locally flagged, unhandled comments in that scope. Edited comments can be matched again. Review rules for false positives before enabling automation.
+- Quota belongs to your Google Cloud project. Read requests generally cost 1 unit; each moderation request costs 50 units, even for fewer than 50 comments. See the official [quota calculator](https://developers.google.com/youtube/v3/determine_quota_cost).
+- Ownership is checked before scanning a specific video and before moderation. This tool moderates your connected channel.
 
-    ```bash
-    python main.py
-    ```
+## Local data and lifecycle
 
------
+| Item | Location / behavior |
+|---|---|
+| Normal data | `%LOCALAPPDATA%\YouTubeSpamCleaner\data` |
+| Offline demo data | `%LOCALAPPDATA%\YouTubeSpamCleaner\demo` |
+| Rules, results, schedule, history | `cleaner.db` (SQLite) |
+| Google client and token | `client.vault`, `token.vault`; Windows DPAPI protection for the current Windows account |
+| Diagnostic log | `application.log`, size-limited rotation |
+| Runtime session | `session.json`, removed on normal shutdown |
 
-## 繁體中文 (Traditional Chinese)
+Closing a browser tab leaves the service running. Launch the EXE again to reopen it. Use **Quit application** in the sidebar to stop it. Scheduled work does not run during sleep, shutdown, or after quitting. Cancellation stops between requests; an in-flight request may finish. Interrupted writes become Unknown on restart.
 
-這是一款使用 **PyQt6** 和 **YouTube Data API v3** 開發的桌面應用程式，旨在幫助您管理和清理 YouTube 影片或頻道上的垃圾留言。它結合了手動審核與自動化處理的強大功能，讓您可以根據自訂的關鍵字列表來刪除留言或封鎖使用者。
+The server binds only to `127.0.0.1` on an available port. API requests require a per-launch session capability. The UI has no CDN or analytics. Google credentials and comments stay local except for requests to Google/YouTube. Keep the data directory private. Disconnect removes the token and pauses automation; revoke consent separately in your Google account if needed. Non-Windows source installations use restricted local files rather than DPAPI encryption.
 
-### 功能特色
+Version 2 replaces the earlier PyQt app. Existing `spam_keywords.txt` files can be imported. Old login sessions and GUI settings are not automatically migrated. The original source remains in Git history.
 
-  - **Google 帳號登入：** 使用 OAuth 2.0 安全地透過您的 Google 帳號登入。
-  - **留言檢索：** 擷取並顯示特定影片或整個頻道上的留言。
-  - **垃圾留言偵測：** 自動標記包含您預設關鍵字的留言。
-  - **關鍵字管理：** 輕鬆新增、編輯、移除及儲存您的垃圾關鍵字列表。
-  - **手動處理模式：** 手動審核被標記的留言，選擇將其刪除或封鎖使用者。
-  - **自動處理模式：** 設定定時器，根據您的關鍵字列表自動處理新的留言，無需手動干預。
-  - **即時日誌：** 查看應用程式執行所有操作的詳細日誌。
+## Architecture
 
-### 詳細使用指南
+```mermaid
+flowchart LR
+    UI[Browser UI] -->|Authenticated local HTTP| API[FastAPI service]
+    API --> DB[(SQLite: rules / comments / history)]
+    API --> Worker[Single background worker]
+    Schedule[Persistent schedule] --> Worker
+    Worker -->|Authorized HTTPS| YouTube[YouTube Data API v3]
+    Worker --> DB
+    Auth[Google OAuth + Windows DPAPI] --> Worker
+    Demo[Offline demo client] -.-> Worker
+    style UI fill:#fff0e9,stroke:#ec6846,color:#29262d
+    style API fill:#eaf0ff,stroke:#617fc1,color:#29262d
+    style Worker fill:#eaf0ff,stroke:#617fc1,color:#29262d
+    style DB fill:#e9f5ee,stroke:#478760,color:#29262d
+    style YouTube fill:#fff0e9,stroke:#ec6846,color:#29262d
+```
 
-1.  **登入：** 點擊「**Login with Google**」（使用 Google 登入）按鈕，並依照指示選擇您的 `client_secret.json` 檔案進行認證。
-2.  **輸入影片/頻道 ID：** 選擇「**Video ID**」或「**Channel ID**」，然後在文字欄位中輸入對應的 ID。
-3.  **管理關鍵字：** 使用「**Add**」（新增）、「**Remove**」（移除）和「**Edit**」（編輯）按鈕來管理您的垃圾關鍵字列表。點擊「**Save**」（儲存）將變更儲存到 `spam_keywords.txt` 檔案中。
-4.  **列出留言：** 點擊「**List Comments**」（列出留言）以擷取並顯示留言。應用程式會自動勾選包含您設定的垃圾關鍵字的留言。
-5.  **處理留言：** 在「**Comments**」標籤中，審核列出的留言，手動勾選或取消勾選您想處理的留言。然後選擇您希望執行的動作：「**Delete only**」（僅刪除）或「**Delete and Ban user**」（刪除並封鎖使用者）。最後，點擊「**Process Selected Comments**」（處理所選留言）即可執行所選動作。
-6.  **自動處理：** 切換到「**Auto**」標籤，設定自動處理的間隔時間（分鐘），然後點擊「**Start Auto-Process**」（開始自動處理）。應用程式將會按照設定的間隔時間，自動執行處理程序。
+Manual and scheduled jobs share one worker to prevent overlap. Each job owns its HTTP session. SQLite persists progress and an action journal so crashes do not silently convert uncertain writes into successful ones.
 
-### 前置作業
+| Source | Responsibility |
+|---|---|
+| `cleaner/launcher.py` | Local server, browser launch, single-instance lifecycle |
+| `cleaner/web.py`, `cleaner/static/` | API, session access, browser interface |
+| `cleaner/engine.py` | Scanning, batches, cancellation, scheduling |
+| `cleaner/youtube.py` | REST requests and error classification |
+| `cleaner/auth.py` | OAuth, refresh, credential protection |
+| `cleaner/store.py`, `cleaner/rules.py` | Persistence and matching |
+| `cleaner/demo.py` | Offline simulated channel |
 
-在執行應用程式之前，您需要設定一個 Google Cloud 專案並啟用 YouTube Data API。
+## Development
 
-1.  **建立 Google Cloud 專案：** 前往 Google Cloud Console 並建立一個新專案。
-2.  **啟用 YouTube Data API v3：** 在 Google Cloud Console 中，導航至「**API 和服務**」儀表板，並啟用 **YouTube Data API v3**。
-3.  **建立 OAuth 2.0 憑證：** 前往「**憑證**」頁面，點擊「**建立憑證**」，然後選擇「**OAuth 用戶端 ID**」。選擇「桌面應用程式」作為應用程式類型。
-4.  **下載 `client_secret.json`：** 下載 `client_secret.json` 檔案。您將需要此檔案來登入應用程式。
+Downloaded app users do not need these steps. For source development, use Python 3.12:
 
-### 安裝與使用方法
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+.venv\Scripts\python launcher.py --demo
+.venv\Scripts\python -m pytest -q
+```
 
-1.  **複製儲存庫：**
+Build and exercise the Windows x64 release on Windows:
 
-    ```bash
-    git clone https://github.com/<username>/<repo-name>.git
-    cd <repo-name>
-    ```
+```powershell
+.venv\Scripts\python scripts/build_windows.py
+.venv\Scripts\python scripts/smoke_executable.py dist/YouTubeSpamCleaner.exe --mode demo
+.venv\Scripts\python scripts/smoke_executable.py dist/YouTubeSpamCleaner.exe --mode normal
+```
 
-2.  **安裝依賴套件：**
-    您必須安裝 Python 3。使用 pip 安裝所需的函式庫。
-
-    ```bash
-    pip install PyQt6 google-api-python-client google-auth-oauthlib
-    ```
-
-3.  **執行應用程式：**
-    將您下載的 `client_secret.json` 檔案放在與應用程式腳本相同的目錄中。然後，從您的終端機執行應用程式。
-
-    ```bash
-    python main.py
-    ```
+Runtime dependencies: FastAPI, Uvicorn, google-auth-oauthlib, Requests, and regex. PyInstaller bundles the runtime. Exact build dependencies are recorded in `requirements-lock.txt`. See [VERIFICATION.md](VERIFICATION.md) for the actual checks and live-account limitations.

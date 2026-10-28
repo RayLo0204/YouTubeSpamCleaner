@@ -1,12 +1,17 @@
-# IDE files
-.idea/
-
-# Python cache and temporary files
+.venv/
 __pycache__/
-*.pyc
-*.pyo
-
-# Sensitive user data
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+artifacts/
+*.spec
+*.db*
+*.log
+*.vault
+session.json
+client_secret*.json
+token*.json
 spam_keywords.txt
-token.json
-client_secret.json
+.idea/
+.env
